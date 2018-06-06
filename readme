@@ -7,3 +7,5 @@ Client Secret: d0c47635f20d5447ec67090b32f6e73ca0cce50d
 name: marcos-first-oauth2-app
 home url: http://localhost:14002/idx
 call back url: http://localhost:14002/oauth/callback
+
+local index page: http://localhost:14002/idx
