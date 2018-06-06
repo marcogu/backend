@@ -9,9 +9,9 @@ import (
 	"net/http"
 )
 
-//
-// The 3part service handlers, In OAuth2, the role is client
-//
+/**
+ * The 3part service handlers, In OAuth2, the role is client
+**/
 type TokenResponse struct {
 	Token string `json:"access_token"`
 	Type  string `json:"token_type"`
@@ -88,4 +88,19 @@ func getUserInfo(token string) string {
 		return ""
 	}
 	return printTokenAccessResponseBodyStr(response.Body)
+}
+
+func SetupGinRoute(router *gin.Engine) {
+	router.GET("/idx", GithubRequestAuth(true))
+	router.GET("/oauth/callback", GithubEuthCallbackHandler)
+	router.Any("/github/user", AccessDataByTokenHandler)
+}
+
+func AccessDataByTokenHandler(c *gin.Context) {
+	token := c.Request.FormValue("token")
+	if len(token) > 0 {
+		c.Writer.WriteString(getUserInfo(token))
+	} else {
+		c.HTML(http.StatusOK, "tkuser.tmpl", nil)
+	}
 }

@@ -8,9 +8,6 @@ import (
 func main() {
 	router := gin.Default()
 	router.LoadHTMLGlob("templates/*")
-
-	router.GET("/idx", github.GithubRequestAuth(true))
-	router.GET("/oauth/callback", github.GithubEuthCallbackHandler)
-
+	github.SetupGinRoute(router)
 	router.Run(":14002")
 }

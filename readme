@@ -9,3 +9,10 @@ home url: http://localhost:14002/idx
 call back url: http://localhost:14002/oauth/callback
 
 local index page: http://localhost:14002/idx
+
+note :
+
+1 GITHUB 江用户的登陆信息纪录在本地cookie中，如果用户已经登陆，则直接进行发放授权码的跳转，给出授权码，让客户程序换取token
+2 如果本地用户没有登陆，github内部跳转登陆页面，登陆成功后发放授权码给客户程序
+3 如果用户已经登陆了，但没有授权；或者，授权的第三方服务行为异常（例如过高平路的请求授权码等）则跳转内部请求接受授权页面。
+4 对用同一个clientID，可能同时存在多个有效token（均能访问API）。 它们派生与不同的授权码。
