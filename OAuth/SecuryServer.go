@@ -34,22 +34,42 @@ func NewDefaultAuthServiceCfg() *osin.ServerConfig {
 func (s *GinAuthServer) AuthorizeReqHandler(c *gin.Context) {
 	resp := s.osinServer.NewResponse()
 	defer resp.Close()
-
-	if ar := s.osinServer.HandleAuthorizeRequest(resp, c.Request); ar != nil {
-		if !example.HandleLoginPage(ar, c.Writer, c.Request) {
-			return
+	// Create AuthorizeRequest struct and return it's pointer for grant Authorization process by storage component,
+	// it will write error info to Response stream when
+	// client information invalid or other error(like authorize http request param format error) occur
+	var authReq *osin.AuthorizeRequest = s.osinServer.HandleAuthorizeRequest(resp, c.Request)
+	if cookieContainLoginedInfo(c.Request) == false && isSuccessMockLoginRequest(c) == false && authReq != nil {
+		templateArg := gin.H{"clientId": authReq.Client.GetId(), "urlRawQuery": c.Request.URL.RawQuery}
+		c.HTML(http.StatusOK, "login.tmpl", templateArg)
+	} else {
+		if authReq != nil {
+			authReq.UserData = struct{ Login string }{Login: "test"}
+			authReq.Authorized = true
+			s.osinServer.FinishAuthorizeRequest(resp, c.Request, authReq)
 		}
-		ar.UserData = struct{ Login string }{Login: "test"}
-		ar.Authorized = true
-		s.osinServer.FinishAuthorizeRequest(resp, c.Request, ar)
+		if resp.IsError && resp.InternalError != nil { // TODO: log error to database
+			fmt.Printf("ERROR: %s\n", resp.InternalError)
+		}
+		if !resp.IsError {
+			resp.Output["custom_parameter"] = 187723
+		}
+		osin.OutputJSON(resp, c.Writer, c.Request)
 	}
-	if resp.IsError && resp.InternalError != nil {
-		fmt.Printf("ERROR: %s\n", resp.InternalError)
+}
+
+func cookieContainLoginedInfo(r *http.Request) bool {
+	_, err := r.Cookie("user_session")
+	if err != nil {
+		return false
+	} else {
+		// TODO: validate login info, and get user
+		return false
 	}
-	if !resp.IsError {
-		resp.Output["custom_parameter"] = 187723
-	}
-	osin.OutputJSON(resp, c.Writer, c.Request)
+}
+
+func isSuccessMockLoginRequest(c *gin.Context) bool {
+	// TODO: This is test stub, please complete the logic.
+	return c.Request.Method == http.MethodPost && c.Query("login") == "test" && c.Query("password") == "test"
 }
 
 func (s *GinAuthServer) AuthCodeReqHandler(c *gin.Context) {
@@ -99,7 +119,7 @@ func (s *GinAuthServer) AuthClientIdxPageHandler(c *gin.Context) {
 }
 
 func (s *GinAuthServer) SetupGinRouter(router *gin.Engine) {
-	router.GET("authorize", s.AuthorizeReqHandler)
+	router.Any("authorize", s.AuthorizeReqHandler)
 	// Client Http API for receive the Auth Code from Authrize Server Redirect request.
 	router.GET("appauth/code", s.AuthCodeReqHandler)
 	router.GET("app", s.AuthClientIdxPageHandler)

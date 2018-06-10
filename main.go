@@ -7,21 +7,19 @@ import (
 )
 
 func main() {
-	bootWithAuthService()
-	//bootWithGithubClient()
+	server := gin.Default()
+	prepareWithAuthService(server)
+	prepareWithGithubClient(server)
+	server.Run(":14000")
 }
 
-func bootWithGithubClient() {
-	router := gin.Default()
-	router.LoadHTMLGlob("templates/*")
-	github.SetupGinRoute(router)
-	router.Run(":14002")
+func prepareWithGithubClient(route *gin.Engine) {
+	route.LoadHTMLGlob("templates/*")
+	github.SetupGinRoute(route)
 }
 
-func bootWithAuthService() {
-	router := gin.Default()
-	router.LoadHTMLGlob("templates/*")
+func prepareWithAuthService(route *gin.Engine) {
+	route.LoadHTMLGlob("templates/*")
 	aserver := OAuth.GetDefaultAuthServer()
-	aserver.SetupGinRouter(router)
-	router.Run(":14001")
+	aserver.SetupGinRouter(route)
 }
