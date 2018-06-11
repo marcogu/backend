@@ -7,8 +7,6 @@ import (
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 	"github.com/prometheus/common/log"
-	"github.com/RangelReale/osin"
-	"backend/models"
 	"database/sql"
 	"github.com/felipeweb/osin-mysql"
 )
@@ -50,10 +48,6 @@ func NewServer() (*Server, error) {
 
 func (s *Server) Run() error {
 	return s.WebServer.Run(":14000")
-}
-
-func NewAuthStorage() osin.Storage {
-	return models.NewTAuthMySQLStorage()
 }
 
 func main() {
