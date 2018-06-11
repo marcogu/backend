@@ -40,10 +40,11 @@ func (s *GinAuthServer) AuthorizeReqHandler(c *gin.Context) {
 	var authReq *osin.AuthorizeRequest = s.osinServer.HandleAuthorizeRequest(resp, c.Request)
 	if cookieContainLoginedInfo(c.Request) == false && isSuccessMockLoginRequest(c) == false && authReq != nil {
 		templateArg := gin.H{
-			"clientId":     authReq.Client.GetId(),
-			"state":        c.Query("state"),
-			"scope":        c.Query("scope"),
-			"redirect_uri": c.Query("redirect_uri")}
+			"clientId":      authReq.Client.GetId(),
+			"state":         c.Query("state"),
+			"scope":         c.Query("scope"),
+			"response_type": c.Query("response_type"),
+			"redirect_uri":  c.Query("redirect_uri")}
 		c.HTML(http.StatusOK, "login.tmpl", templateArg)
 	} else {
 		if authReq != nil {
@@ -73,7 +74,10 @@ func cookieContainLoginedInfo(r *http.Request) bool {
 
 func isSuccessMockLoginRequest(c *gin.Context) bool {
 	// TODO: This is test stub, please complete the logic.
-	return c.Request.Method == http.MethodPost && c.Query("login") == "test" && c.Query("password") == "test"
+	succLoginRs := c.Request.Method == http.MethodPost &&
+		c.Request.Form.Get("login") == "test" &&
+		c.Request.Form.Get("password") == "test"
+	return succLoginRs
 }
 
 func (s *GinAuthServer) AuthCodeReqHandler(c *gin.Context) {
