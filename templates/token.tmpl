@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Title</title>
+</head>
+<body>
+  This is 3prt Client pages.
+  {{ if .noneErr }}
+  APP AUTH - CODE<br/>
+  Receive Code:  {{.code}}<br/>
+  My Client ID:   {{.clientId}}<br/>
+  My Security Key: {{.secury}} <br/>
+  <a href="{{.gotoTokenUrl}}">Request grant token from Auth Server</a><br/>
+  {{ else }}
+  ERROR:  {{.errInfo}}
+  {{ end }}
+</body>
+</html>

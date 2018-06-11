@@ -80,46 +80,22 @@ func isSuccessMockLoginRequest(c *gin.Context) bool {
 	return succLoginRs
 }
 
-func (s *GinAuthServer) AuthCodeReqHandler(c *gin.Context) {
+func (s *GinAuthServer) AuthCodeReceiveHandler(c *gin.Context) {
 	code := c.Query("code")
-	c.Writer.Write([]byte("<html><body>"))
-	c.Writer.Write([]byte("APP AUTH - CODE<br/>"))
-	defer c.Writer.Write([]byte("</body></html>"))
-
 	if code == "" {
-		c.Writer.Write([]byte("Nothing to do"))
-		return
-	}
-	jr := make(map[string]interface{})
-	// build access code url
-	aurl := fmt.Sprintf("/token?grant_type=authorization_code&client_id=1234&state=xyz&redirect_uri=%s&code=%s",
-		url.QueryEscape("http://localhost:14000/appauth/code"), url.QueryEscape(code))
-
-	if c.Query("doparse") == "1" { // if parse, download and parse json
-		err := example.DownloadAccessToken(fmt.Sprintf("http://localhost:14000%s", aurl),
-			&osin.BasicAuth{"1234", "aabbccdd"}, jr)
-		if err != nil {
-			c.Writer.Write([]byte(err.Error()))
-			c.Writer.Write([]byte("<br/>"))
+		c.HTML(http.StatusOK, "token.tmpl", gin.H{"noneErr": false, "errInfo": "Receive Code is empty, Nothing to do"})
+	} else {
+		accessTokenRequestUrl := fmt.Sprintf("/token?grant_type=authorization_code&client_id=1234&client_secret=aabbccdd&state=xyz&redirect_uri=%s&code=%s",
+			url.QueryEscape("http://localhost:14000/appauth/code"), url.QueryEscape(code))
+		htmlParam := gin.H{
+			"gotoTokenUrl": accessTokenRequestUrl,
+			"code":         code,
+			"clientId":     "1234",
+			"secury":       "aabbccdd",
+			"noneErr":      true,
 		}
+		c.HTML(http.StatusOK, "token.tmpl", htmlParam)
 	}
-
-	if erd, ok := jr["error"]; ok { // show json error
-		c.Writer.Write([]byte(fmt.Sprintf("ERROR: %s<br/>\n", erd)))
-	}
-
-	if at, ok := jr["access_token"]; ok { // show json access token
-		c.Writer.Write([]byte(fmt.Sprintf("ACCESS TOKEN: %s<br/>\n", at)))
-	}
-	c.Writer.Write([]byte(fmt.Sprintf("FULL RESULT: %+v<br/>\n", jr)))
-	// output links
-	c.Writer.Write([]byte(fmt.Sprintf("<a href=\"%s\">Goto Token URL</a><br/>", aurl)))
-
-	cururl := *c.Request.URL
-	curq := cururl.Query()
-	curq.Add("doparse", "1")
-	cururl.RawQuery = curq.Encode()
-	c.Writer.Write([]byte(fmt.Sprintf("<a href=\"%s\">Download Token</a><br/>", cururl.String())))
 }
 
 func (s *GinAuthServer) AuthClientIdxPageHandler(c *gin.Context) {
@@ -141,8 +117,8 @@ func (s *GinAuthServer) AccessTokenHandler(c *gin.Context) {
 }
 
 func (s *GinAuthServer) SetupGinRouter(router *gin.Engine) {
-	router.Any("authorize", s.AuthorizeReqHandler)   // role : Authorize server
-	router.GET("appauth/code", s.AuthCodeReqHandler) // role : Client server
-	router.GET("app", s.AuthClientIdxPageHandler)    // role: Client (Resources) server
-	router.Any("/token", s.AccessTokenHandler)       // role : Authorize server
+	router.Any("authorize", s.AuthorizeReqHandler)       // role : Authorize server
+	router.GET("appauth/code", s.AuthCodeReceiveHandler) // role : Client server
+	router.GET("app", s.AuthClientIdxPageHandler)        // role : Client (Resources) server, Index page.
+	router.Any("/token", s.AccessTokenHandler)           // role : Authorize server
 }
