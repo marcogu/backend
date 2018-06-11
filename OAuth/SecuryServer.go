@@ -126,9 +126,23 @@ func (s *GinAuthServer) AuthClientIdxPageHandler(c *gin.Context) {
 	c.HTML(http.StatusOK, "authidx.tmpl", nil)
 }
 
+func (s *GinAuthServer) AccessTokenHandler(c *gin.Context) {
+	resp := s.osinServer.NewResponse()
+	defer resp.Close()
+
+	if ar := s.osinServer.HandleAccessRequest(resp, c.Request); ar != nil {
+		ar.Authorized = true
+		s.osinServer.FinishAccessRequest(resp, c.Request, ar)
+	}
+	if resp.IsError && resp.InternalError != nil {
+		fmt.Printf("ERROR: %s\n", resp.InternalError)
+	}
+	osin.OutputJSON(resp, c.Writer, c.Request)
+}
+
 func (s *GinAuthServer) SetupGinRouter(router *gin.Engine) {
-	router.Any("authorize", s.AuthorizeReqHandler)
-	// Client Http API for receive the Auth Code from Authrize Server Redirect request.
-	router.GET("appauth/code", s.AuthCodeReqHandler)
-	router.GET("app", s.AuthClientIdxPageHandler)
+	router.Any("authorize", s.AuthorizeReqHandler)   // role : Authorize server
+	router.GET("appauth/code", s.AuthCodeReqHandler) // role : Client server
+	router.GET("app", s.AuthClientIdxPageHandler)    // role: Client (Resources) server
+	router.Any("/token", s.AccessTokenHandler)       // role : Authorize server
 }
