@@ -39,7 +39,11 @@ func (s *GinAuthServer) AuthorizeReqHandler(c *gin.Context) {
 	// client information invalid or other error(like authorize http request param format error) occur
 	var authReq *osin.AuthorizeRequest = s.osinServer.HandleAuthorizeRequest(resp, c.Request)
 	if cookieContainLoginedInfo(c.Request) == false && isSuccessMockLoginRequest(c) == false && authReq != nil {
-		templateArg := gin.H{"clientId": authReq.Client.GetId(), "urlRawQuery": c.Request.URL.RawQuery}
+		templateArg := gin.H{
+			"clientId":     authReq.Client.GetId(),
+			"state":        c.Query("state"),
+			"scope":        c.Query("scope"),
+			"redirect_uri": c.Query("redirect_uri")}
 		c.HTML(http.StatusOK, "login.tmpl", templateArg)
 	} else {
 		if authReq != nil {
