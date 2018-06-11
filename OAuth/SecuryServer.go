@@ -3,7 +3,6 @@ package OAuth
 import (
 	"fmt"
 	"github.com/RangelReale/osin"
-	"github.com/RangelReale/osin/example"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"net/url"
@@ -13,9 +12,8 @@ type GinAuthServer struct {
 	osinServer *osin.Server
 }
 
-func GetDefaultAuthServer() *GinAuthServer {
-	fackeStorage := example.NewTestStorage()
-	s := osin.NewServer(NewDefaultAuthServiceCfg(), fackeStorage)
+func GetDefaultAuthServer(storage osin.Storage) *GinAuthServer {
+	s := osin.NewServer(NewDefaultAuthServiceCfg(), storage)
 	authServer := &GinAuthServer{}
 	authServer.osinServer = s
 	return authServer
