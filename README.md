@@ -17,7 +17,7 @@ NOTE:
 1. 如果用户已经登录了，但没有授权；或者，授权的第三方服务行为异常（例如过高频率的请求授权码等）则跳转内部请求接受授权页面。
 1. 对用同一个clientID，可能同时存在多个有效token（均能访问API）。 它们派生与不同的授权码。
 1. 截止版本 91b06bec 目标可执行文件大小为 15MB（GOOS=linux GOARCH=amd64）。
-1. 启动应用需提供环境变量
+1. 启动应用需提供环境变量，并且要预先在db server上建立OSIN_DB_DATABASE所指定的库。
 	* OSIN_DB_USERNAME（required）
 	* OSIN_DB_PASSWORD（optional，default empty）
 	* OSIN_DB_HOST（required）
