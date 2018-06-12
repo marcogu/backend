@@ -114,9 +114,19 @@ func (s *GinAuthServer) AccessTokenHandler(c *gin.Context) {
 	osin.OutputJSON(resp, c.Writer, c.Request)
 }
 
+func (s *GinAuthServer) TokenInfoHandler(c *gin.Context) {
+	resp := s.osinServer.NewResponse()
+	defer resp.Close()
+	if ir := s.osinServer.HandleInfoRequest(resp, c.Request); ir != nil {
+		s.osinServer.FinishInfoRequest(resp, c.Request, ir)
+	}
+	osin.OutputJSON(resp, c.Writer, c.Request)
+}
+
 func (s *GinAuthServer) SetupGinRouter(router *gin.Engine) {
 	router.Any("authorize", s.AuthorizeReqHandler)       // role : Authorize server
 	router.GET("appauth/code", s.AuthCodeReceiveHandler) // role : Client server
 	router.GET("app", s.AuthClientIdxPageHandler)        // role : Client (Resources) server, Index page.
 	router.Any("/token", s.AccessTokenHandler)           // role : Authorize server
+	router.Any("/api/token/info", s.TokenInfoHandler)
 }
