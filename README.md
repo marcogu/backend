@@ -24,3 +24,4 @@ NOTE:
 	* OSIN_DB_PORT（optional， default `3306`）
 	* OSIN_DB_DATABASE（required）
 	* OSIN_TABLE_PREFIX（optional， default `osin_`）
+	* GIN_MODE（optional，default `release`)
