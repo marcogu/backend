@@ -71,6 +71,11 @@ func NewServer() (*Server, error) {
 
 	authServer := OAuth.GetDefaultAuthServer(store)
 
+	ginMode, ok := os.LookupEnv(gin.ENV_GIN_MODE)
+	if !ok || len(ginMode) == 0 {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
 	server := &Server{
 		WebServer:  gin.Default(),
 		AuthServer: authServer,
