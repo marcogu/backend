@@ -25,3 +25,18 @@ NOTE:
 	* OSIN_DB_DATABASE（required）
 	* OSIN_TABLE_PREFIX（optional， default `osin_`）
 	* GIN_MODE（optional，default `release`)
+
+
+About Docker Using:
+=================================
+
+#for install mysql container instance:
+
+
+#for start an existing mysql container instance:
+docker start mysql-db
+
+docker container ls -a
+GOOS=linux GOARCH=amd64 go build .
+docker build -t go-app:latest .
+docker run -e GIN_MODE=debug -it --link mysql-db:backend  --rm -p 14000:14000 go-app:latest /bin/sh

@@ -3,7 +3,9 @@ package OAuth
 import (
 	"fmt"
 	"github.com/RangelReale/osin"
+	"github.com/felipeweb/osin-mysql"
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/common/log"
 	"net/http"
 	"net/url"
 )
@@ -12,11 +14,35 @@ type GinAuthServer struct {
 	osinServer *osin.Server
 }
 
-func GetDefaultAuthServer(storage osin.Storage) *GinAuthServer {
+func GetDefaultAuthServer(storage *mysql.Storage) *GinAuthServer {
+	initDbData(storage)
 	s := osin.NewServer(NewDefaultAuthServiceCfg(), storage)
 	authServer := &GinAuthServer{}
 	authServer.osinServer = s
 	return authServer
+}
+
+func initDbData(storage *mysql.Storage) {
+	testClientId := "5678"
+	testClient, err := storage.GetClient(testClientId)
+	if testClient != nil {
+		storage.RemoveClient(testClientId)
+	} else if err != nil && err != osin.ErrNotFound {
+		log.Warn("Try add default client error, stop update default application client:", err.Error())
+		return
+	}
+	createErr := storage.CreateClient(
+		&osin.DefaultClient{
+			Id:          testClientId,
+			Secret:      "9527abcdefg0039",
+			RedirectUri: "http://localhost:8091/oauth/callback",
+			UserData:    ""},
+	)
+	if createErr == nil {
+		log.Debug("default client did update.")
+	} else {
+		log.Warn("Insert default client error.", createErr.Error())
+	}
 }
 
 func NewDefaultAuthServiceCfg() *osin.ServerConfig {
@@ -32,9 +58,6 @@ func NewDefaultAuthServiceCfg() *osin.ServerConfig {
 func (s *GinAuthServer) AuthorizeReqHandler(c *gin.Context) {
 	resp := s.osinServer.NewResponse()
 	defer resp.Close()
-	// Create AuthorizeRequest struct and return it's pointer for grant Authorization process by storage component,
-	// it will write error info to Response stream when
-	// client information invalid or other error(like authorize http request param format error) occur
 	var authReq *osin.AuthorizeRequest = s.osinServer.HandleAuthorizeRequest(resp, c.Request)
 	if cookieContainLoginedInfo(c.Request) == false && isSuccessMockLoginRequest(c) == false && authReq != nil {
 		templateArg := gin.H{
