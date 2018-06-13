@@ -1,11 +1,11 @@
 package main
 
 import (
-	"backend/OAuth"
-	"backend/github"
+	"backend/handlers"
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/RangelReale/osin"
 	"github.com/felipeweb/osin-mysql"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
@@ -15,12 +15,51 @@ import (
 )
 
 type Server struct {
-	WebServer  *gin.Engine
-	AuthServer *OAuth.GinAuthServer
-	Db         *gorm.DB
+	WebServer   *gin.Engine
+	WebDb       *gorm.DB
+	AuthServer  *osin.Server
+	AuthStorage *mysql.Storage
 }
 
 func NewServer() (*Server, error) {
+	storage, err := newAuthStorage()
+	if err != nil {
+		return nil, err
+	}
+
+	webServer := newWebServer()
+	authServer := osin.NewServer(newDefaultAuthServiceCfg(), storage)
+
+	server := &Server{
+		WebServer:   webServer,
+		AuthServer:  authServer,
+		AuthStorage: storage,
+	}
+
+	initTestClient(storage)
+
+	authorizeHandler := handlers.AuthorizeReqHandler(authServer)
+	accesstokenHandler := handlers.AccessTokenHandler(authServer)
+	tokeninfoHandler := handlers.TokenInfoHandler(authServer)
+
+	oauthGroup := webServer.Group("/oauth")
+	oauthGroup.GET("/authorize", authorizeHandler).POST("/authorize", authorizeHandler).
+		GET("/token", accesstokenHandler).POST("/token", accesstokenHandler).
+		GET("/api/token/info", tokeninfoHandler).POST("/api/token/info", tokeninfoHandler)
+
+	return server, nil
+}
+
+func main() {
+	server, err := NewServer()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Fatal(server.WebServer.Run())
+}
+
+func newAuthStorage() (*mysql.Storage, error) {
 	osinDbUsername, ok := os.LookupEnv("OSIN_DB_USERNAME")
 	if !ok || len(osinDbUsername) == 0 {
 		return nil, errors.New("No OSIN_DB_USERNAME env is provided!")
@@ -60,7 +99,7 @@ func NewServer() (*Server, error) {
 
 	osinTablePrefix, ok := os.LookupEnv("OSIN_TABLE_PREFIX")
 	if !ok || len(osinTablePrefix) == 0 {
-		log.Warn("No OSIN_TABLE_PREFIX env is provided and default value \"osin_\" is used.")
+		log.Warn(`No OSIN_TABLE_PREFIX env is provided and default value "osin_" is used.`)
 		osinTablePrefix = "osin_"
 	}
 
@@ -69,37 +108,49 @@ func NewServer() (*Server, error) {
 		log.Warnf("Error creating osin schemas: %v", err.Error())
 	}
 
-	authServer := OAuth.GetDefaultAuthServer(store)
+	return store, nil
+}
 
+func newWebServer() *gin.Engine {
 	ginMode, ok := os.LookupEnv(gin.ENV_GIN_MODE)
 	if !ok || len(ginMode) == 0 {
 		gin.SetMode(gin.ReleaseMode)
 	}
-
-	server := &Server{
-		WebServer:  gin.Default(),
-		AuthServer: authServer,
-	}
-
-	server.WebServer.LoadHTMLGlob("templates/*")
-	server.AuthServer.SetupGinRouter(server.WebServer)
-
-	// For github client tests.
-	server.WebServer.LoadHTMLGlob("templates/*")
-	github.SetupGinRoute(server.WebServer)
-
-	return server, nil
+	server := gin.Default()
+	server.LoadHTMLGlob("templates/*")
+	return server
 }
 
-func (s *Server) Run() error {
-	return s.WebServer.Run(":14000")
+func initTestClient(storage *mysql.Storage) {
+	testClientId := "5678"
+	testClient, err := storage.GetClient(testClientId)
+	if testClient != nil {
+		storage.RemoveClient(testClientId)
+	} else if err != nil && err != osin.ErrNotFound {
+		log.Warn("Try add default client error, stop update default application client:", err.Error())
+		return
+	}
+	createErr := storage.CreateClient(
+		&osin.DefaultClient{
+			Id:          testClientId,
+			Secret:      "9527abcdefg0039",
+			RedirectUri: "http://localhost:8091/oauth/callback",
+			UserData:    "",
+		},
+	)
+	if createErr == nil {
+		log.Debug("default client did update.")
+	} else {
+		log.Warn("Insert default client error.", createErr.Error())
+	}
 }
 
-func main() {
-	server, err := NewServer()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	log.Fatal(server.Run())
+func newDefaultAuthServiceCfg() *osin.ServerConfig {
+	sconfig := osin.NewServerConfig()
+	sconfig.AllowedAuthorizeTypes = osin.AllowedAuthorizeType{osin.CODE, osin.TOKEN}
+	sconfig.AllowedAccessTypes = osin.AllowedAccessType{osin.AUTHORIZATION_CODE,
+		osin.REFRESH_TOKEN, osin.PASSWORD, osin.CLIENT_CREDENTIALS, osin.ASSERTION}
+	sconfig.AllowGetAccessRequest = true
+	sconfig.AllowClientSecretInParams = true
+	return sconfig
 }
