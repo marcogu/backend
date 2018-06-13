@@ -21,48 +21,36 @@ type Server struct {
 	AuthStorage *mysql.Storage
 }
 
-func NewServer() (*Server, error) {
-	storage, err := newAuthStorage()
-	if err != nil {
-		return nil, err
-	}
-
+func NewServer() *Server {
+	authStorage := newAuthStorage()
+	authServer := osin.NewServer(&osin.ServerConfig{
+		AllowedAuthorizeTypes:     osin.AllowedAuthorizeType{osin.CODE, osin.TOKEN},
+		AllowedAccessTypes:        osin.AllowedAccessType{osin.AUTHORIZATION_CODE, osin.REFRESH_TOKEN, osin.PASSWORD, osin.CLIENT_CREDENTIALS, osin.ASSERTION},
+		AllowGetAccessRequest:     true,
+		AllowClientSecretInParams: true,
+	}, authStorage)
 	webServer := newWebServer()
-	authServer := osin.NewServer(newDefaultAuthServiceCfg(), storage)
 
 	server := &Server{
 		WebServer:   webServer,
 		AuthServer:  authServer,
-		AuthStorage: storage,
+		AuthStorage: authStorage,
 	}
 
-	initTestClient(storage)
+	initTestClient(authStorage)
+	registerAuthRoutes(webServer, authServer)
 
-	authorizeHandler := handlers.AuthorizeReqHandler(authServer)
-	accesstokenHandler := handlers.AccessTokenHandler(authServer)
-	tokeninfoHandler := handlers.TokenInfoHandler(authServer)
-
-	oauthGroup := webServer.Group("/oauth")
-	oauthGroup.GET("/authorize", authorizeHandler).POST("/authorize", authorizeHandler).
-		GET("/token", accesstokenHandler).POST("/token", accesstokenHandler).
-		GET("/api/token/info", tokeninfoHandler).POST("/api/token/info", tokeninfoHandler)
-
-	return server, nil
+	return server
 }
 
 func main() {
-	server, err := NewServer()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	log.Fatal(server.WebServer.Run())
+	log.Fatal(NewServer().WebServer.Run())
 }
 
-func newAuthStorage() (*mysql.Storage, error) {
+func newAuthStorage() *mysql.Storage {
 	osinDbUsername, ok := os.LookupEnv("OSIN_DB_USERNAME")
 	if !ok || len(osinDbUsername) == 0 {
-		return nil, errors.New("No OSIN_DB_USERNAME env is provided!")
+		panic(errors.New("No OSIN_DB_USERNAME env is provided!"))
 	}
 
 	osinDbPassword, ok := os.LookupEnv("OSIN_DB_PASSWORD")
@@ -72,7 +60,7 @@ func newAuthStorage() (*mysql.Storage, error) {
 
 	osinDbHost, ok := os.LookupEnv("OSIN_DB_HOST")
 	if !ok || len(osinDbHost) == 0 {
-		return nil, errors.New("No OSIN_DB_HOST env is provided!")
+		panic(errors.New("No OSIN_DB_HOST env is provided!"))
 	}
 
 	osinDbPort, ok := os.LookupEnv("OSIN_DB_PORT")
@@ -83,7 +71,7 @@ func newAuthStorage() (*mysql.Storage, error) {
 
 	osinDbDatabse, ok := os.LookupEnv("OSIN_DB_DATABASE")
 	if !ok || len(osinDbDatabse) == 0 {
-		return nil, errors.New("No OSIN_DB_DATABASE env is provided!")
+		panic(errors.New("No OSIN_DB_DATABASE env is provided!"))
 	}
 
 	db, err := sql.Open("mysql", fmt.Sprintf("%v:%v@tcp(%v:%v)/%v?parseTime=true",
@@ -94,7 +82,7 @@ func newAuthStorage() (*mysql.Storage, error) {
 		osinDbDatabse,
 	))
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
 	osinTablePrefix, ok := os.LookupEnv("OSIN_TABLE_PREFIX")
@@ -105,10 +93,10 @@ func newAuthStorage() (*mysql.Storage, error) {
 
 	store := mysql.New(db, osinTablePrefix)
 	if err := store.CreateSchemas(); err != nil {
-		log.Warnf("Error creating osin schemas: %v", err.Error())
+		panic(err)
 	}
 
-	return store, nil
+	return store
 }
 
 func newWebServer() *gin.Engine {
@@ -123,34 +111,36 @@ func newWebServer() *gin.Engine {
 
 func initTestClient(storage *mysql.Storage) {
 	testClientId := "5678"
-	testClient, err := storage.GetClient(testClientId)
-	if testClient != nil {
-		storage.RemoveClient(testClientId)
-	} else if err != nil && err != osin.ErrNotFound {
-		log.Warn("Try add default client error, stop update default application client:", err.Error())
-		return
+
+	_, err := storage.GetClient(testClientId)
+	if err != nil {
+		if err != osin.ErrNotFound {
+			panic(err)
+		}
+	} else {
+		if err = storage.RemoveClient(testClientId); err != nil {
+			panic(err)
+		}
 	}
-	createErr := storage.CreateClient(
+
+	if err := storage.CreateClient(
 		&osin.DefaultClient{
 			Id:          testClientId,
 			Secret:      "9527abcdefg0039",
 			RedirectUri: "http://localhost:8091/oauth/callback",
 			UserData:    "",
 		},
-	)
-	if createErr == nil {
-		log.Debug("default client did update.")
-	} else {
-		log.Warn("Insert default client error.", createErr.Error())
+	); err != nil {
+		panic(err)
 	}
 }
 
-func newDefaultAuthServiceCfg() *osin.ServerConfig {
-	sconfig := osin.NewServerConfig()
-	sconfig.AllowedAuthorizeTypes = osin.AllowedAuthorizeType{osin.CODE, osin.TOKEN}
-	sconfig.AllowedAccessTypes = osin.AllowedAccessType{osin.AUTHORIZATION_CODE,
-		osin.REFRESH_TOKEN, osin.PASSWORD, osin.CLIENT_CREDENTIALS, osin.ASSERTION}
-	sconfig.AllowGetAccessRequest = true
-	sconfig.AllowClientSecretInParams = true
-	return sconfig
+func registerAuthRoutes(webServer *gin.Engine, authServer *osin.Server) {
+	authorizeHandler := handlers.AuthorizeReqHandler(authServer)
+	accesstokenHandler := handlers.AccessTokenHandler(authServer)
+	tokeninfoHandler := handlers.TokenInfoHandler(authServer)
+
+	webServer.Group("/oauth").GET("/authorize", authorizeHandler).POST("/authorize", authorizeHandler).
+		GET("/token", accesstokenHandler).POST("/token", accesstokenHandler).
+		GET("/api/token/info", tokeninfoHandler).POST("/api/token/info", tokeninfoHandler)
 }
