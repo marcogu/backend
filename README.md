@@ -25,7 +25,7 @@ NOTE:
 	* OSIN_DB_DATABASE（required）
 	* OSIN_TABLE_PREFIX（optional， default `osin_`）
 	* GIN_MODE（optional，default `release`)
-        * PORT（optional，default `8080`）
+    * PORT（optional，default `8080`）
 
 
 About Docker Using:
