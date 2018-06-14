@@ -23,12 +23,7 @@ type Server struct {
 
 func NewServer() *Server {
 	authStorage := newAuthStorage()
-	authServer := osin.NewServer(&osin.ServerConfig{
-		AllowedAuthorizeTypes:     osin.AllowedAuthorizeType{osin.CODE, osin.TOKEN},
-		AllowedAccessTypes:        osin.AllowedAccessType{osin.AUTHORIZATION_CODE, osin.REFRESH_TOKEN, osin.PASSWORD, osin.CLIENT_CREDENTIALS, osin.ASSERTION},
-		AllowGetAccessRequest:     true,
-		AllowClientSecretInParams: true,
-	}, authStorage)
+	authServer := osin.NewServer(newAuthServerConfig(), authStorage)
 	webServer := newWebServer()
 
 	server := &Server{
@@ -143,4 +138,15 @@ func registerAuthRoutes(webServer *gin.Engine, authServer *osin.Server) {
 	webServer.Group("/oauth").GET("/authorize", authorizeHandler).POST("/authorize", authorizeHandler).
 		GET("/token", accesstokenHandler).POST("/token", accesstokenHandler).
 		GET("/api/token/info", tokeninfoHandler).POST("/api/token/info", tokeninfoHandler)
+}
+
+func newAuthServerConfig() *osin.ServerConfig {
+	config := osin.NewServerConfig()
+	config.AllowedAuthorizeTypes = osin.AllowedAuthorizeType{osin.CODE, osin.TOKEN}
+	config.AllowedAccessTypes = osin.AllowedAccessType{osin.AUTHORIZATION_CODE, osin.REFRESH_TOKEN, osin.PASSWORD, osin.CLIENT_CREDENTIALS, osin.ASSERTION}
+	config.AllowGetAccessRequest = true
+	config.AllowClientSecretInParams = true
+	config.AuthorizationExpiration = 250
+	config.AccessExpiration = 3600
+	return config
 }
