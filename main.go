@@ -45,7 +45,7 @@ func main() {
 func newAuthStorage() *mysql.Storage {
 	osinDbUsername, ok := os.LookupEnv("OSIN_DB_USERNAME")
 	if !ok || len(osinDbUsername) == 0 {
-		panic(errors.New("No OSIN_DB_USERNAME env is provided!"))
+		panic(errors.New("no OSIN_DB_USERNAME env is provided"))
 	}
 
 	osinDbPassword, ok := os.LookupEnv("OSIN_DB_PASSWORD")
@@ -55,7 +55,7 @@ func newAuthStorage() *mysql.Storage {
 
 	osinDbHost, ok := os.LookupEnv("OSIN_DB_HOST")
 	if !ok || len(osinDbHost) == 0 {
-		panic(errors.New("No OSIN_DB_HOST env is provided!"))
+		panic(errors.New("no OSIN_DB_HOST env is provided"))
 	}
 
 	osinDbPort, ok := os.LookupEnv("OSIN_DB_PORT")
@@ -66,7 +66,7 @@ func newAuthStorage() *mysql.Storage {
 
 	osinDbDatabse, ok := os.LookupEnv("OSIN_DB_DATABASE")
 	if !ok || len(osinDbDatabse) == 0 {
-		panic(errors.New("No OSIN_DB_DATABASE env is provided!"))
+		panic(errors.New("no OSIN_DB_DATABASE env is provided"))
 	}
 
 	db, err := sql.Open("mysql", fmt.Sprintf("%v:%v@tcp(%v:%v)/%v?parseTime=true",
