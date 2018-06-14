@@ -33,7 +33,7 @@ func NewServer() *Server {
 	}
 
 	initTestClient(authStorage)
-	registerAuthRoutes(webServer, authServer)
+	registerAuthRoutes(webServer, authServer, authStorage)
 
 	return server
 }
@@ -130,14 +130,15 @@ func initTestClient(storage *mysql.Storage) {
 	}
 }
 
-func registerAuthRoutes(webServer *gin.Engine, authServer *osin.Server) {
+func registerAuthRoutes(webServer *gin.Engine, authServer *osin.Server, authOperationStorage *mysql.Storage) {
 	authorizeHandler := handlers.AuthorizeReqHandler(authServer)
 	accesstokenHandler := handlers.AccessTokenHandler(authServer)
 	tokeninfoHandler := handlers.TokenInfoHandler(authServer)
 
 	webServer.Group("/oauth").GET("/authorize", authorizeHandler).POST("/authorize", authorizeHandler).
 		GET("/token", accesstokenHandler).POST("/token", accesstokenHandler).
-		GET("/api/token/info", tokeninfoHandler).POST("/api/token/info", tokeninfoHandler)
+		GET("/api/token/info", tokeninfoHandler).POST("/api/token/info", tokeninfoHandler).
+		POST("/register/client", handlers.RegistClientApp(authOperationStorage))
 }
 
 func newAuthServerConfig() *osin.ServerConfig {

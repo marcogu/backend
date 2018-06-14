@@ -1,10 +1,14 @@
 package handlers
 
 import (
+	"backend/common"
 	"fmt"
 	"github.com/RangelReale/osin"
+	"github.com/felipeweb/osin-mysql"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"net/url"
+	"strings"
 )
 
 type LoginForm struct {
@@ -90,4 +94,51 @@ func TokenInfoHandler(s *osin.Server) gin.HandlerFunc {
 		}
 		osin.OutputJSON(resp, c.Writer, c.Request)
 	}
+}
+
+func RegistClientApp(s *mysql.Storage) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		clt, err := validateAppClient(c.Query("client_id"), c.Query("client_secret"), c.Query("redirect_uri"))
+		if err != nil {
+			c.String(http.StatusBadRequest, err.Error())
+		} else {
+			existClient, err := s.GetClient(clt.GetId())
+			if err == nil && existClient != nil {
+				c.String(http.StatusConflict, "client is exist")
+				return
+			}
+
+			createErr := s.CreateClient(clt)
+			if createErr != nil {
+				c.String(http.StatusBadGateway, createErr.Error())
+			} else {
+				c.String(http.StatusOK, "client did regist")
+			}
+		}
+	}
+}
+
+func validateAppClient(cid string, secret string, redirect string) (*osin.DefaultClient, error) {
+	trimedId := strings.TrimSpace(cid)
+	if len(trimedId) == 0 {
+		return nil, common.NewFormValidateError("client_id is not none feild")
+	}
+
+	trimedSecret := strings.TrimSpace(secret)
+	if len(trimedSecret) == 0 {
+		return nil, common.NewFormValidateError("secret is not none feild")
+	}
+
+	_, err := url.ParseRequestURI(redirect)
+	if err != nil {
+		return nil, common.NewFormValidateError(fmt.Sprintf("redirect_uri is invalide:%s", err.Error()))
+	}
+
+	targetClient := &osin.DefaultClient{
+		Id:          trimedId,
+		Secret:      trimedSecret,
+		RedirectUri: redirect,
+		UserData:    "",
+	}
+	return targetClient, nil
 }
