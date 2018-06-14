@@ -2,6 +2,7 @@ package main
 
 import (
 	"backend/handlers"
+	"backend/models"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -24,10 +25,12 @@ type Server struct {
 func NewServer() *Server {
 	authStorage := newAuthStorage()
 	authServer := osin.NewServer(newAuthServerConfig(), authStorage)
+	webDb := newWebDb()
 	webServer := newWebServer()
 
 	server := &Server{
 		WebServer:   webServer,
+		WebDb:       webDb,
 		AuthServer:  authServer,
 		AuthStorage: authStorage,
 	}
@@ -149,4 +152,47 @@ func newAuthServerConfig() *osin.ServerConfig {
 	config.AuthorizationExpiration = 250
 	config.AccessExpiration = 3600
 	return config
+}
+
+func newWebDb() *gorm.DB {
+	webDbUsername, ok := os.LookupEnv("WEB_DB_USERNAME")
+	if !ok || len(webDbUsername) == 0 {
+		panic(errors.New("no WEB_DB_USERNAME env is provided"))
+	}
+
+	webDbPassword, ok := os.LookupEnv("WEB_DB_PASSWORD")
+	if !ok || len(webDbPassword) == 0 {
+		log.Warn("No WEB_DB_PASSWORD env is provided. If it is, your database server is NOT SECURE!")
+	}
+
+	webDbHost, ok := os.LookupEnv("WEB_DB_HOST")
+	if !ok || len(webDbHost) == 0 {
+		panic(errors.New("no WEB_DB_HOST env is provided"))
+	}
+
+	webDbPort, ok := os.LookupEnv("WEB_DB_PORT")
+	if !ok || len(webDbPort) == 0 {
+		log.Warn("No WEB_DB_PORT env is provided and default value 3306 is used.")
+		webDbPort = "3306"
+	}
+
+	webDbDatabse, ok := os.LookupEnv("WEB_DB_DATABASE")
+	if !ok || len(webDbDatabse) == 0 {
+		panic(errors.New("no WEB_DB_DATABASE env is provided"))
+	}
+
+	db, err := gorm.Open("mysql", fmt.Sprintf("%v:%v@tcp(%v:%v)/%v?charset=utf8&parseTime=True&loc=Local",
+		webDbUsername,
+		webDbPassword,
+		webDbHost,
+		webDbPort,
+		webDbDatabse,
+	))
+	if err != nil {
+		panic(err)
+	}
+
+	db.AutoMigrate(&models.User{})
+
+	return db
 }
