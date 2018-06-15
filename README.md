@@ -31,6 +31,7 @@ NOTE:
 About Docker Using:
 =================================
 
+```docker
 #use mysql terminal connect mysql-db:
 docker exec -it mysql-db mysql -uroot -pabiglionnotfat
 
@@ -41,3 +42,9 @@ docker container ls -a
 GOOS=linux GOARCH=amd64 go build .
 docker build -t go-app:latest .
 docker run -e GIN_MODE=debug -it --link mysql-db:backend  --rm -p 14000:14000 go-app:latest /bin/sh
+```
+
+HTTP API Useage
+=================================
+Index page: `http://localhost:8091/idx`
+Access Resources by token: `http://localhost:14000/oauth/api/token/info?code=uIFxs0McRS2aX0t6KSxvnQ`
