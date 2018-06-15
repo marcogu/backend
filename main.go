@@ -37,12 +37,9 @@ func NewServer() *Server {
 
 	initTestClient(authStorage)
 	registerAuthRoutes(webServer, authServer, authStorage)
+	registerWebRoutes(webServer)
 
 	return server
-}
-
-func main() {
-	log.Fatal(NewServer().WebServer.Run())
 }
 
 func newAuthStorage() *mysql.Storage {
@@ -196,4 +193,13 @@ func newWebDb() *gorm.DB {
 	db.AutoMigrate(&models.User{})
 
 	return db
+}
+
+func registerWebRoutes(webServer *gin.Engine) {
+	vcodeHandler := handlers.VCodeHandler()
+	webServer.Group("/member").POST("/vcode", vcodeHandler)
+}
+
+func main() {
+	log.Fatal(NewServer().WebServer.Run())
 }
