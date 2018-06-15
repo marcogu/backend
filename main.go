@@ -99,7 +99,29 @@ func newWebServer() *gin.Engine {
 	if !ok || len(ginMode) == 0 {
 		gin.SetMode(gin.ReleaseMode)
 	}
+
+	staticPathFromEnv := func() string {
+		osinStaticRs, ok := os.LookupEnv("OSIN_STATIC_RESOURCES")
+		if !ok || len(osinStaticRs) == 0 {
+			osinStaticRs = "./statics"
+		}
+
+		if fi, err := os.Stat(osinStaticRs); err != nil {
+			if os.IsNotExist(err) {
+				os.Mkdir(osinStaticRs, os.ModeDir)
+				return osinStaticRs
+			} else {
+				panic(err)
+			}
+		} else if fi.Mode().IsDir() == false {
+			panic(errors.New("OSIN_STATIC_RESOURCES file is exist, but it is not a folder!"))
+		} else {
+			return osinStaticRs
+		}
+	}()
+
 	server := gin.Default()
+	server.Static("/assets", staticPathFromEnv)
 	server.LoadHTMLGlob("templates/*")
 	return server
 }

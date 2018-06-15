@@ -31,8 +31,8 @@ NOTE:
 About Docker Using:
 =================================
 
-#for install mysql container instance:
-
+#use mysql terminal connect mysql-db:
+docker exec -it mysql-db mysql -uroot -pabiglionnotfat
 
 #for start an existing mysql container instance:
 docker start mysql-db
