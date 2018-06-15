@@ -37,7 +37,7 @@ func NewServer() *Server {
 
 	initTestClient(authStorage)
 	registerAuthRoutes(webServer, authServer, authStorage)
-	registerWebRoutes(webServer)
+	registerWebRoutes(webServer, webDb)
 
 	return server
 }
@@ -195,9 +195,14 @@ func newWebDb() *gorm.DB {
 	return db
 }
 
-func registerWebRoutes(webServer *gin.Engine) {
-	vcodeHandler := handlers.VCodeHandler()
-	webServer.Group("/member").POST("/vcode", vcodeHandler)
+func registerWebRoutes(webServer *gin.Engine, webDb *gorm.DB) {
+	g := webServer.Group("/member")
+
+	vcodeHandler := handlers.VCodeHandler(webDb)
+	loginHandler := handlers.VCodeLoginHandler()
+
+	g.POST("/vcode", vcodeHandler)
+	g.POST("/login", loginHandler)
 }
 
 func main() {
