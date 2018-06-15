@@ -47,4 +47,5 @@ docker run -e GIN_MODE=debug -it --link mysql-db:backend  --rm -p 14000:14000 go
 HTTP API Useage
 =================================
 Index page: `http://localhost:8091/idx`
+
 Access Resources by token: `http://localhost:14000/oauth/api/token/info?code=uIFxs0McRS2aX0t6KSxvnQ`
