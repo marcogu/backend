@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-type LoginForm struct {
+type OAuthLoginForm struct {
 	Login            string `form:"login"`
 	Pwd              string `form:"password"`
 	ClientId         string `form:"client_id"`
@@ -27,7 +27,7 @@ func AuthorizeReqHandler(s *osin.Server) gin.HandlerFunc {
 		resp := s.NewResponse()
 		defer resp.Close()
 
-		var loginForm LoginForm
+		var loginForm OAuthLoginForm
 		c.ShouldBind(&loginForm)
 
 		var authReq = s.HandleAuthorizeRequest(resp, c.Request)
@@ -62,7 +62,7 @@ func cookieContainLoginedInfo(r *http.Request) bool {
 	}
 }
 
-func isSuccessMockLoginRequest(form *LoginForm) bool {
+func isSuccessMockLoginRequest(form *OAuthLoginForm) bool {
 	// TODO: This is test stub, please complete the logic.
 	succLoginRs := form.Login == "test" && form.Pwd == "test"
 	return succLoginRs

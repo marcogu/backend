@@ -8,9 +8,12 @@ import (
 	"math/rand"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 )
+
+type LoginForm struct {
+	Mobile string `form:"mobile" binding:"numeric,len=11"`
+}
 
 func VCodeLoginHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -19,10 +22,10 @@ func VCodeLoginHandler(db *gorm.DB) gin.HandlerFunc {
 
 func VCodeHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		mobile := c.PostForm("mobile")
-		if len(strings.TrimSpace(mobile)) == 11 {
+		var loginForm LoginForm
+		if err := c.ShouldBind(&loginForm); err == nil {
 			vcode := randomVerifyingCode()
-			utils.CACHE[mobile] = vcode
+			utils.CACHE[loginForm.Mobile] = vcode
 			c.JSON(http.StatusOK, gin.H{
 				"vcode": vcode,
 			})
